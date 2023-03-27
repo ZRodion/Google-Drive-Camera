@@ -39,5 +39,10 @@
         <argument
             android:name="isSuccessfully"
             app:argType="boolean" />
+        <action
+            android:id="@+id/action_message_to_camera"
+            app:destination="@id/cameraFragment"
+            app:popUpTo="@id/nav_graph"
+            app:popUpToInclusive="true"/>
     </dialog>
 </navigation>

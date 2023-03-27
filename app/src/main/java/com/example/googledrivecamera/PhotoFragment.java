@@ -4,6 +4,7 @@ import android.annotation.SuppressLint;
 import android.location.Location;
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -62,6 +63,7 @@ public class PhotoFragment extends Fragment {
         });
 
         binding.cloudButton.setOnClickListener(v -> {
+            loading(true);
 
             CancellationToken token = new CancellationToken() {
                 @NonNull
@@ -81,11 +83,16 @@ public class PhotoFragment extends Fragment {
             task.addOnSuccessListener(location -> {
                 if (location == null) {
                     Toast.makeText(requireContext(), "Cannot get location.", Toast.LENGTH_SHORT).show();
+
+                    loading(false);
+
                     NavDirections action = PhotoFragmentDirections.actionPhotoToMessage(false);
                     navController.navigate(action);
                 } else {
                     double lat = location.getLatitude();
                     double lon = location.getLongitude();
+
+                    loading(false);
 
                     Toast.makeText(requireContext(), "Current location: " + lat + " " + lon, Toast.LENGTH_SHORT).show();
 
@@ -94,5 +101,19 @@ public class PhotoFragment extends Fragment {
                 }
             });
         });
+    }
+
+    private void loading(boolean isLoading){
+        if(isLoading){
+            binding.photoView.setAlpha(0.5f);
+            binding.progressBar.setVisibility(View.VISIBLE);
+            binding.cancelButton.setEnabled(false);
+            binding.cloudButton.setEnabled(false);
+        }else{
+            binding.photoView.setAlpha(1f);
+            binding.progressBar.setVisibility(View.INVISIBLE);
+            binding.cancelButton.setEnabled(true);
+            binding.cloudButton.setEnabled(true);
+        }
     }
 }
