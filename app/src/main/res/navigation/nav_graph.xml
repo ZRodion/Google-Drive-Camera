@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/cameraFragment">
+    <fragment
+        android:id="@+id/cameraFragment"
+        android:name="com.example.googledrivecamera.CameraFragment"
+        android:label="fragment_permission"
+        tools:layout="@layout/fragment_permission" >
+        <action
+            android:id="@+id/action_camera_to_permission"
+            app:destination="@id/permissionFragment" />
+        <action
+            android:id="@+id/action_camera_to_photo"
+            app:destination="@id/photoFragment"/>
+    </fragment>
+    <fragment
+        android:id="@+id/permissionFragment"
+        android:name="com.example.googledrivecamera.PermissionFragment"
+        android:label="PermissionFragment" />
+    <fragment
+        android:id="@+id/photoFragment"
+        android:name="com.example.googledrivecamera.PhotoFragment"
+        android:label="fragment_photo"
+        tools:layout="@layout/fragment_photo" >
+        <argument
+            android:name="photo_uri"
+            app:argType="android.net.Uri" />
+        <action
+            android:id="@+id/action_photo_to_message"
+            app:destination="@id/messageDialogFragment" />
+    </fragment>
+    <dialog
+        android:id="@+id/messageDialogFragment"
+        android:name="com.example.googledrivecamera.MessageDialogFragment"
+        android:label="MessageDialogFragment">
+        <argument
+            android:name="isSuccessfully"
+            app:argType="boolean" />
+    </dialog>
+</navigation>
