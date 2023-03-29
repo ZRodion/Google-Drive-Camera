@@ -42,7 +42,7 @@ public class MessageDialogFragment extends DialogFragment {
 
         if(!isSuccessful){
             binding.imageView.setImageResource(R.drawable.ic_error);
-            binding.messageTextView.setText("All is not ok");
+            binding.messageTextView.setText(R.string.error_message);
         }
 
         NavController navController = NavHostFragment.findNavController(this);
@@ -53,13 +53,5 @@ public class MessageDialogFragment extends DialogFragment {
                 navController.popBackStack();
             }
         });
-        /*boolean isSuccessful = MessageDialogFragmentArgs.fromBundle(getArguments()).getIsSuccessfully();
-        if(!isSuccessful){
-            binding.imageView.setImageResource(R.drawable.ic_error);
-            binding.messageTextView.setText("All is not ok");
-        }else{
-            NavController navController = NavHostFragment.findNavController(this);
-            navController.navigate(MessageDialogFragmentDirections.actionMessageToCamera());
-        }*/
     }
 }

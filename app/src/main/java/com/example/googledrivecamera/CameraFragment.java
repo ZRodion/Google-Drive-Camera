@@ -63,8 +63,6 @@ public class CameraFragment extends Fragment {
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-
-
         outputDirectory = getOutputDirectory();
         cameraExecutor = Executors.newSingleThreadExecutor();
     }
@@ -74,8 +72,6 @@ public class CameraFragment extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         checkPermission();
         binding = FragmentCameraBinding.inflate(inflater, container, false);
-
-
 
         return binding.getRoot();
     }
@@ -165,8 +161,6 @@ public class CameraFragment extends Fragment {
     }
 
     private void takePhoto() {
-        Log.d("MyTag", "takePhoto");
-
         ImageCapture imageCapture = this.imageCapture;
         if (imageCapture == null) {
             return;

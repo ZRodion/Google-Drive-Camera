@@ -1,8 +1,9 @@
 <resources>
-    <string name="app_name">GoogleDriveCamera</string>
+    <string name="app_name">Google Drive Camera</string>
     <string name="take_photo">take photo</string>
-    <!-- TODO: Remove or change this placeholder text -->
-    <string name="hello_blank_fragment">Hello blank fragment</string>
     <string name="wrong_camera_permission_text">something is wrong</string>
     <string name="request_permission">request permission</string>
+    
+    <string name="success_message">All is OK</string>
+    <string name="error_message">something is wrong</string>
 </resources>
