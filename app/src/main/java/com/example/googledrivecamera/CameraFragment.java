@@ -95,13 +95,7 @@ public class CameraFragment extends Fragment {
             return false;
         });
         binding.cameraCaptureButton.setOnClickListener(v -> {
-            if(isLocationEnabled()){
                 takePhoto();
-            }else{
-                Toast.makeText(requireContext(), "Please turn on" + " your location...", Toast.LENGTH_LONG).show();
-                Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
-                startActivity(intent);
-            }
         });
 
         binding.cameraswitchImageView.setBackgroundResource(0);
@@ -237,11 +231,6 @@ public class CameraFragment extends Fragment {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-    }
-
-    private boolean isLocationEnabled() {
-        LocationManager locationManager = (LocationManager) requireContext().getSystemService(Context.LOCATION_SERVICE);
-        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) || locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
     }
 
     private void hideStatusBar(){

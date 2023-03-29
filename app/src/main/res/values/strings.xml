@@ -6,4 +6,10 @@
     
     <string name="success_message">All is OK</string>
     <string name="error_message">something is wrong</string>
+
+    <string name="signed_in_message">Signed in as %1$s</string>
+    <string name="sign_in_error">SignIn is error</string>
+    <string name="network_error">Network is off</string>
+    <string name="location_error">Cannot get location</string>
+    <string name="file_saveing">file save error</string>
 </resources>

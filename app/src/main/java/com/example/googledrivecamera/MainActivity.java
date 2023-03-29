@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -13,7 +14,6 @@ import com.example.googledrivecamera.databinding.ActivityMainBinding;
 /*
 добавить отображение иконки аккаунта
 добавить возможность сменить аккаунт
-изменить формат сохранения текста
 Добавить удаление файлов после отправки
 Добавить локализацию
 Добавить надписи с тем, что происходит в приложении
@@ -28,6 +28,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         binding = ActivityMainBinding.inflate(getLayoutInflater());
 
+        Toast toast = new Toast(getApplicationContext());
 
         setContentView(binding.getRoot());
     }

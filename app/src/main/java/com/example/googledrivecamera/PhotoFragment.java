@@ -1,7 +1,6 @@
 package com.example.googledrivecamera;
 
 import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
@@ -31,9 +30,9 @@ import androidx.navigation.NavController;
 import androidx.navigation.NavDirections;
 import androidx.navigation.fragment.NavHostFragment;
 
+import com.bumptech.glide.Glide;
 import com.example.googledrivecamera.databinding.FragmentPhotoBinding;
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
-import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.gms.common.api.Scope;
@@ -42,7 +41,6 @@ import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.Priority;
 import com.google.android.gms.tasks.CancellationToken;
 import com.google.android.gms.tasks.CancellationTokenSource;
-import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.OnTokenCanceledListener;
 import com.google.android.gms.tasks.Task;
 import com.google.api.client.extensions.android.http.AndroidHttp;
@@ -51,12 +49,14 @@ import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.DriveScopes;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.Collections;
 
 /*
-1. get google account
+1. get network state
 2. get location
-3. get network state
+3. get google account
  */
 
 public class PhotoFragment extends Fragment {
@@ -65,24 +65,21 @@ public class PhotoFragment extends Fragment {
     private static final String TAG = "MyTag";
 
     FusedLocationProviderClient mFusedLocationClient;
+
     Location userLocation;
     Uri photoUri;
 
     private DriveServiceHelper mDriveServiceHelper;
-    private String mOpenFileId;
 
     ActivityResultLauncher<Intent> signInLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
-            result -> {
-                handleSignInResult(result.getData());
-            });
+            result -> handleSignInResult(result.getData()));
 
 
     @SuppressLint("MissingPermission")
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(requireContext());
     }
 
@@ -106,20 +103,34 @@ public class PhotoFragment extends Fragment {
         binding.cancelButton.setOnClickListener(v -> {
             NavController navController = NavHostFragment.findNavController(this);
             navController.popBackStack();
-            /*Bitmap bitmap = ((BitmapDrawable) binding.photoView.getDrawable()).getBitmap();
-
-            createImageFile(bitmap);*/
         });
 
-        binding.cloudButton.setOnClickListener(v -> {
+        /*binding.cloudButton.setOnClickListener(v -> {
             loadingState(true);
+            checkNetworkState();
+        });*/
+        requestSignIn();
+    }
 
-            requestSignIn();
-        });
+    private void checkNetworkState() {
+        ConnectivityManager cm = (ConnectivityManager) requireContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+        if (activeNetwork == null || !activeNetwork.isConnected()) {
+            Toast.makeText(requireContext(), R.string.network_error, Toast.LENGTH_SHORT).show();
+            toMessageFragment(false);
+            loadingState(false);
+        } else {
+            if (isLocationEnabled()) {
+                getLocation();
+            } else {
+                loadingState(false);
+                Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                startActivity(intent);
+            }
+        }
     }
 
     private void requestSignIn() {
-
         GoogleSignInOptions signInOptions =
                 new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                         .requestEmail()
@@ -133,7 +144,7 @@ public class PhotoFragment extends Fragment {
     private void handleSignInResult(Intent result) {
         GoogleSignIn.getSignedInAccountFromIntent(result)
                 .addOnSuccessListener(googleAccount -> {
-                    Log.d(TAG, "Signed in as " + googleAccount.getEmail());
+                    Toast.makeText(requireContext(), getString(R.string.signed_in_message, googleAccount.getEmail()), Toast.LENGTH_SHORT).show();
 
                     GoogleAccountCredential credential =
                             GoogleAccountCredential.usingOAuth2(
@@ -149,18 +160,23 @@ public class PhotoFragment extends Fragment {
 
                     mDriveServiceHelper = new DriveServiceHelper(googleDriveService);
 
-                    if (isLocationEnabled()) {
-                        getLocation();
-                    } else {
-                        loadingState(false);
-                        Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
-                        startActivity(intent);
-                    }
+                    //setting email bar
+                    binding.emailText.setText(googleAccount.getEmail());
+                    Glide.with(requireContext())
+                            .load(googleAccount.getPhotoUrl())
+                            .override(100, 100)
+                            .into(binding.emailIconImage);
+
+                    binding.cloudButton.setOnClickListener(v -> {
+                        loadingState(true);
+                        checkNetworkState();
+                    });
                 })
                 .addOnFailureListener(exception -> {
-                    Toast.makeText(requireContext(), "SignIn is error", Toast.LENGTH_SHORT);
+                    Toast.makeText(requireContext(), R.string.sign_in_error, Toast.LENGTH_SHORT).show();
                     toMessageFragment(false);
-                    loadingState(false);
+
+                    binding.cloudButton.setOnClickListener(v -> requestSignIn());
                 });
     }
 
@@ -182,51 +198,54 @@ public class PhotoFragment extends Fragment {
         Task<Location> locationTask = mFusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, token);
         locationTask.addOnSuccessListener(location -> {
             if (location == null) {
-                Toast.makeText(requireContext(), "Cannot get location.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(requireContext(), R.string.location_error, Toast.LENGTH_SHORT).show();
                 toMessageFragment(false);
                 loadingState(false);
             } else {
                 userLocation = location;
 
-                checkNetworkState();
+                createFile();
+                //requestSignIn();
             }
         });
     }
 
-    private void checkNetworkState() {
-        ConnectivityManager cm = (ConnectivityManager) requireContext().getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
-        if (activeNetwork == null || !activeNetwork.isConnected()) {
-            Toast.makeText(requireContext(), "Network is off", Toast.LENGTH_SHORT).show();
-            toMessageFragment(false);
-            loadingState(false);
-        } else {
-            Bitmap bitmap = ((BitmapDrawable) binding.photoView.getDrawable()).getBitmap();
 
-            createFile(bitmap);
-        }
-    }
-
-
-    private void createFile(Bitmap bitmap) {
-        String fileName = getFileNameFromUri(photoUri).split("\\.")[0];
-
-        String content = "Latitude: " + userLocation.getLatitude() + ", Longitude: " + userLocation.getLongitude() +
-                "\nFile name: " + fileName;
+    private void createFile() {
 
         if (mDriveServiceHelper != null) {
-            Log.d(TAG, "Creating a file.");
+            String photoDate = getFileNameFromUri(photoUri);
 
-            mDriveServiceHelper.createFile(bitmap, content, fileName)
+            String content = "[" + userLocation.getLatitude() + "][" + userLocation.getLongitude() + "][" + photoDate + "]";
+
+            Bitmap bitmap = ((BitmapDrawable) binding.photoView.getDrawable()).getBitmap();
+
+            mDriveServiceHelper.createFile(bitmap, content, photoDate)
                     .addOnSuccessListener(fileId -> {
                         toMessageFragment(true);
+                        try {
+                            deleteFile();
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
                     })
                     .addOnFailureListener(exception -> {
                         toMessageFragment(false);
-                        Toast.makeText(requireContext(), "Files is not saved", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(requireContext(), R.string.file_saveing, Toast.LENGTH_SHORT).show();
                     });
         } else {
-            Log.d(TAG, "dont Creating a file.");
+            Log.d(TAG, "Driver is null");
+        }
+    }
+
+    private void deleteFile() throws IOException {
+        File file = new File(photoUri.getPath());
+        file.delete();
+        if (file.exists()) {
+            file.getCanonicalFile().delete();
+            if (file.exists()) {
+                requireContext().getApplicationContext().deleteFile(file.getName());
+            }
         }
     }
 
