@@ -21,6 +21,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
+import androidx.activity.OnBackPressedCallback;
+import androidx.activity.OnBackPressedDispatcher;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
@@ -33,6 +35,7 @@ import androidx.navigation.fragment.NavHostFragment;
 import com.bumptech.glide.Glide;
 import com.example.googledrivecamera.databinding.FragmentPhotoBinding;
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.gms.common.api.Scope;
@@ -52,12 +55,6 @@ import com.google.api.services.drive.DriveScopes;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
-
-/*
-1. get network state
-2. get location
-3. get google account
- */
 
 public class PhotoFragment extends Fragment {
     private FragmentPhotoBinding binding;
@@ -80,6 +77,16 @@ public class PhotoFragment extends Fragment {
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        //BackButton
+        OnBackPressedCallback callback = new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                Log.d(TAG, "Back button clicks");
+            }
+        };
+        requireActivity().getOnBackPressedDispatcher().addCallback(this, callback);
+
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(requireContext());
     }
 
@@ -105,10 +112,6 @@ public class PhotoFragment extends Fragment {
             navController.popBackStack();
         });
 
-        /*binding.cloudButton.setOnClickListener(v -> {
-            loadingState(true);
-            checkNetworkState();
-        });*/
         requestSignIn();
     }
 
@@ -138,40 +141,28 @@ public class PhotoFragment extends Fragment {
                         .build();
         GoogleSignInClient client = GoogleSignIn.getClient(requireContext(), signInOptions);
 
-        signInLauncher.launch(client.getSignInIntent());
+        binding.emailChanger.setOnClickListener(v -> client.signOut()
+                .addOnCompleteListener(signOutTask -> {
+                    requestSignIn();
+                }));
+
+        //проверка на то, вошел ли пользователь в свой аккаунт до этого
+        client.silentSignIn()
+                .addOnCompleteListener(requireActivity(), task -> {
+                    if (task.isSuccessful()) {
+                        getGoogleAccount(task.getResult());
+                    } else {
+                        //запрос на вход
+                        signInLauncher.launch(client.getSignInIntent());
+                    }
+                });
+
+
     }
 
     private void handleSignInResult(Intent result) {
         GoogleSignIn.getSignedInAccountFromIntent(result)
-                .addOnSuccessListener(googleAccount -> {
-                    Toast.makeText(requireContext(), getString(R.string.signed_in_message, googleAccount.getEmail()), Toast.LENGTH_SHORT).show();
-
-                    GoogleAccountCredential credential =
-                            GoogleAccountCredential.usingOAuth2(
-                                    requireContext(), Collections.singleton(DriveScopes.DRIVE_FILE));
-                    credential.setSelectedAccount(googleAccount.getAccount());
-                    Drive googleDriveService =
-                            new Drive.Builder(
-                                    AndroidHttp.newCompatibleTransport(),
-                                    new GsonFactory(),
-                                    credential)
-                                    .setApplicationName("Google Drive Camera")
-                                    .build();
-
-                    mDriveServiceHelper = new DriveServiceHelper(googleDriveService);
-
-                    //setting email bar
-                    binding.emailText.setText(googleAccount.getEmail());
-                    Glide.with(requireContext())
-                            .load(googleAccount.getPhotoUrl())
-                            .override(100, 100)
-                            .into(binding.emailIconImage);
-
-                    binding.cloudButton.setOnClickListener(v -> {
-                        loadingState(true);
-                        checkNetworkState();
-                    });
-                })
+                .addOnSuccessListener(this::getGoogleAccount)
                 .addOnFailureListener(exception -> {
                     Toast.makeText(requireContext(), R.string.sign_in_error, Toast.LENGTH_SHORT).show();
                     toMessageFragment(false);
@@ -180,8 +171,38 @@ public class PhotoFragment extends Fragment {
                 });
     }
 
+    private void getGoogleAccount(GoogleSignInAccount googleAccount) {
+        GoogleAccountCredential credential =
+                GoogleAccountCredential.usingOAuth2(
+                        requireContext(), Collections.singleton(DriveScopes.DRIVE_FILE));
+        credential.setSelectedAccount(googleAccount.getAccount());
+        Drive googleDriveService =
+                new Drive.Builder(
+                        AndroidHttp.newCompatibleTransport(),
+                        new GsonFactory(),
+                        credential)
+                        .setApplicationName("Google Drive Camera")
+                        .build();
+
+        mDriveServiceHelper = new DriveServiceHelper(googleDriveService);
+
+        //setting email bar
+        binding.emailText.setText(googleAccount.getEmail());
+        Glide.with(requireContext())
+                .load(googleAccount.getPhotoUrl())
+                .override(100, 100)
+                .into(binding.emailIconImage);
+
+        binding.cloudButton.setOnClickListener(v -> {
+            loadingState(true);
+            checkNetworkState();
+        });
+    }
+
     @SuppressLint("MissingPermission")
     private void getLocation() {
+        binding.stateText.setText(R.string.location_getting_state);
+
         CancellationToken token = new CancellationToken() {
             @NonNull
             @Override
@@ -198,6 +219,8 @@ public class PhotoFragment extends Fragment {
         Task<Location> locationTask = mFusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, token);
         locationTask.addOnSuccessListener(location -> {
             if (location == null) {
+                binding.stateText.setText("");
+
                 Toast.makeText(requireContext(), R.string.location_error, Toast.LENGTH_SHORT).show();
                 toMessageFragment(false);
                 loadingState(false);
@@ -205,13 +228,13 @@ public class PhotoFragment extends Fragment {
                 userLocation = location;
 
                 createFile();
-                //requestSignIn();
             }
         });
     }
 
 
     private void createFile() {
+        binding.stateText.setText(R.string.file_save_state);
 
         if (mDriveServiceHelper != null) {
             String photoDate = getFileNameFromUri(photoUri);
@@ -224,14 +247,16 @@ public class PhotoFragment extends Fragment {
                     .addOnSuccessListener(fileId -> {
                         toMessageFragment(true);
                         try {
+                            binding.stateText.setText("");
                             deleteFile();
                         } catch (IOException e) {
                             throw new RuntimeException(e);
                         }
                     })
                     .addOnFailureListener(exception -> {
+                        binding.stateText.setText("");
                         toMessageFragment(false);
-                        Toast.makeText(requireContext(), R.string.file_saveing, Toast.LENGTH_SHORT).show();
+                        Toast.makeText(requireContext(), R.string.file_save, Toast.LENGTH_SHORT).show();
                     });
         } else {
             Log.d(TAG, "Driver is null");

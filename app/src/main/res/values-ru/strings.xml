@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Google Drive Camera</string>
+    <string name="wrong_camera_permission_text">Чего-то не хватает</string>
+    <string name="request_permission">Запросить разрешение</string>
+    <string name="error_message">Что-то пошло не так</string>
+    <string name="signed_in_message">Вход в аккаунт %1$s</string>
+    <string name="sign_in_error">Ошибка входа</string>
+    <string name="network_error">Ошибка подключения к интернету</string>
+    <string name="location_error">Не удалось получить геоданные</string>
+    <string name="file_save">Не удалось сохранить файл</string>
+    <string name="success_save_message">Файл сохранен</string>
+    <string name="location_getting_state">Получение данных локации</string>
+    <string name="file_save_state">Сохранение файла</string>
+</resources>

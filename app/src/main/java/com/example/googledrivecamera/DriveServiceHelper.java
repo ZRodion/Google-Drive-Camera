@@ -42,16 +42,18 @@ public class DriveServiceHelper {
             //get file name
             FileList files = mDriveService.files().list().execute();
             List<File> list = files.getFiles();
-
-            //
+            int photoNumber = 0;
+            //ищем первый элемент начинающийся с photo_
             for(File item: list){
-                Log.d(TAG, item.getName());
+                if(item.getName().contains("photo_")){
+                    photoNumber = Integer.parseInt(item.getName().replaceAll("[^0-9]", ""));
+                    break;
+                }
             }
-            //
 
             //create txt file
             File fileMetadata = new File();
-            fileMetadata.setName("photo_"+ list.size()/2 + ".geo");
+            fileMetadata.setName("photo_"+ ++photoNumber + ".geo");
             fileMetadata.setParents(Collections.singletonList(folderId));
             fileMetadata.setMimeType("text/plain");
             ByteArrayContent mediaContent = ByteArrayContent.fromString("text/plain", content);
